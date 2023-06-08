@@ -1,0 +1,15 @@
+- name: Task1
+  dependencies: []
+
+- name: Task2
+  dependencies: [Task1]
+
+- name: Task3
+  dependencies: [Task1]
+
+- name: Task4
+  dependencies: []
+
+- name: Task5
+  dependencies: [Task4]
+
