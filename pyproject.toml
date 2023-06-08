@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "maestro"
+version = "0.1.0"
+description = "Another data engineering framewokr"
+authors = ["squerez"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+pyyaml = "^6.0"
+networkx = "^3.1"
+matplotlib = "^3.7.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
