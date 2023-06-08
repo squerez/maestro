@@ -1,0 +1,10 @@
+[
+  {
+    "name": "Task1",
+    "dependencies": ["Task2"]
+  },
+  {
+    "name": "Task2",
+    "dependencies": ["Task1"]
+  }
+]
