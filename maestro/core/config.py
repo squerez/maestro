@@ -58,6 +58,9 @@ class ConfigReader:
             if not isinstance(dependencies, list):
                 raise ValueError(f"Invalid dependencies for task '{name}': must be a list")
 
+            if len(dependencies) != len(set(dependencies)):
+                raise ValueError(f"Duplicate dependencies found for task '{name}'")
+
             task_names.add(name)
             dependency_names.update(dependencies)
 
