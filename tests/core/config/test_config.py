@@ -36,6 +36,12 @@ def test_from_yaml_invalid_file_undefined_dependency(reader):
     error_msg = "Invalid dependencies: some tasks are referenced but not defined"
     assert error_msg in str(exc_info.value)
 
+def test_from_yaml_invalid_file_duplicated_dependency(reader):
+    with pytest.raises(ValueError) as exc_info:
+        reader.from_yaml("tests/core/config/yaml/duplicated_dependencies.yaml")
+    error_msg = "Duplicate dependencies found for task"
+    assert error_msg in str(exc_info.value)
+
 def test_from_yaml_invalid_file_circular_references(reader):
     with pytest.raises(ValueError) as exc_info:
         reader.from_yaml("tests/core/config/yaml/circular_reference.yaml")
@@ -72,6 +78,12 @@ def test_from_json_invalid_file_undefined_dependency(reader):
     with pytest.raises(ValueError) as exc_info:
         reader.from_json("tests/core/config/json/undefined_dependencies.json")
     error_msg = "Invalid dependencies: some tasks are referenced but not defined"
+    assert error_msg in str(exc_info.value)
+
+def test_from_json_invalid_file_duplicated_dependency(reader):
+    with pytest.raises(ValueError) as exc_info:
+        reader.from_json("tests/core/config/json/duplicated_dependencies.json")
+    error_msg = "Duplicate dependencies found for task"
     assert error_msg in str(exc_info.value)
 
 def test_from_json_invalid_file_circular_references(reader):
