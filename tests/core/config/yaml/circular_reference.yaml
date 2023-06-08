@@ -1,0 +1,12 @@
+- name: Task1
+  dependencies:
+    - Task2
+
+- name: Task2
+  dependencies:
+    - Task3
+
+- name: Task3
+  dependencies:
+    - Task1
+
