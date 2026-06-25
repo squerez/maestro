@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="mb-8">
+    <h1 class="text-2xl font-bold text-white">Grafana</h1>
+    <p class="mt-1 text-gray-400 text-sm">Dashboard provisioning and pipeline-level Grafana links</p>
+</div>
+
+{% if grafana_url %}
+<!-- Embedded Grafana -->
+<div class="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden mb-6">
+    <div class="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
+        <h2 class="text-white font-semibold text-base">Grafana</h2>
+        <a href="{{ grafana_url }}" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">
+            Open in new tab →
+        </a>
+    </div>
+    <iframe
+        src="{{ grafana_url }}"
+        class="w-full border-0"
+        style="height: 600px;"
+        title="Grafana dashboard"
+        loading="lazy"
+    ></iframe>
+</div>
+{% endif %}
+
+{% if pipeline_links %}
+<!-- Per-pipeline links -->
+<div class="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden mb-6">
+    <div class="px-6 py-4 border-b border-gray-800">
+        <h2 class="text-white font-semibold text-base">Pipeline dashboards</h2>
+    </div>
+    <div class="divide-y divide-gray-800">
+        {% for link in pipeline_links %}
+        <div class="px-6 py-4 flex items-center justify-between">
+            <span class="text-gray-300 text-sm font-medium">{{ link.name }}</span>
+            <a
+                href="{{ link.url }}"
+                target="_blank"
+                class="inline-flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+            >
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                </svg>
+                Open dashboard
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Dashboard import -->
+<div class="bg-gray-900 rounded-xl border border-gray-800 p-6 mb-6">
+    <div class="flex items-start justify-between gap-4">
+        <div>
+            <h2 class="text-white font-semibold text-base mb-1">Import the Maestro dashboard</h2>
+            <p class="text-gray-400 text-sm">
+                The pre-built dashboard covers all six Prometheus metrics:
+                pipeline runs, duration, records, DQ failures, SLA breaches, and DLQ.
+            </p>
+        </div>
+        {% if dashboard_path %}
+        <a
+            href="/api/grafana/dashboard"
+            download="maestro_dashboard.json"
+            class="flex-shrink-0 inline-flex items-center gap-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 px-4 py-2 text-sm font-medium text-white transition-colors"
+        >
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+            Download JSON
+        </a>
+        {% endif %}
+    </div>
+
+    <ol class="mt-5 space-y-2 text-sm text-gray-400 list-decimal list-inside">
+        <li>In Grafana, go to <span class="text-gray-200">Dashboards → New → Import</span></li>
+        <li>Click <span class="text-gray-200">Upload dashboard JSON file</span> and select the downloaded file</li>
+        <li>Select your Prometheus data source when prompted</li>
+        <li>Use the <span class="text-gray-200">Pipeline</span> variable to filter by pipeline</li>
+    </ol>
+
+    {% if dashboard_path %}
+    <p class="mt-4 text-xs text-gray-600 font-mono">{{ dashboard_path }}</p>
+    {% endif %}
+</div>
+
+<!-- Variables reference -->
+<div class="bg-gray-900 rounded-xl border border-gray-800 p-6">
+    <h2 class="text-white font-semibold text-base mb-4">Dashboard variables</h2>
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-800">
+                    <th class="text-left text-gray-400 font-medium pb-3 pr-6">Variable</th>
+                    <th class="text-left text-gray-400 font-medium pb-3 pr-6">Type</th>
+                    <th class="text-left text-gray-400 font-medium pb-3">Description</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-800">
+                <tr>
+                    <td class="py-3 pr-6 font-mono text-xs text-indigo-300">$datasource</td>
+                    <td class="py-3 pr-6 text-gray-300">Datasource</td>
+                    <td class="py-3 text-gray-400">Prometheus data source to query</td>
+                </tr>
+                <tr>
+                    <td class="py-3 pr-6 font-mono text-xs text-indigo-300">$pipeline</td>
+                    <td class="py-3 pr-6 text-gray-300">Query (multi)</td>
+                    <td class="py-3 text-gray-400">Filter by pipeline name — supports multi-select, defaults to All</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

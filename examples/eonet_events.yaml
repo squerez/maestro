@@ -1,0 +1,51 @@
+name: eonet_events
+version: "1.0"
+
+runtime:
+  type: polars
+
+contract:
+  schema:
+    - {name: event_id,        type: string, nullable: false}
+    - {name: title,           type: string, nullable: false}
+    - {name: category_id,     type: string, nullable: true}
+    - {name: category_title,  type: string, nullable: true}
+    - {name: point_date,      type: string, nullable: true}
+    - {name: longitude,       type: float,  nullable: true}
+    - {name: latitude,        type: float,  nullable: true}
+    - {name: magnitude_value, type: float,  nullable: true}
+    - {name: magnitude_unit,  type: string, nullable: true}
+  producer: "nasa/eonet/v3"
+  consumer: "maestro"
+  version: "1.0"
+
+observability:
+  prometheus_port: null
+  event_log: /tmp/maestro_output/events.jsonl
+  grafana_url: http://localhost:3000/d/maestro-pipelines-v1/maestro-pipelines?var-pipeline=eonet_events
+
+lineage:
+  enabled: true
+  backend_url: http://localhost:5000
+  namespace: maestro
+
+steps:
+  - name: ingest
+    plugin: source.http_json
+    params:
+      url: https://eonet.gsfc.nasa.gov/api/v3/events
+      list_key: events
+      query_params:
+        status: all
+        days: 365
+        limit: 1000
+
+  - name: normalize
+    plugin: transform.normalize_eonet_events
+    params: {}
+
+  - name: write_parquet
+    plugin: sink.parquet
+    params:
+      path: /tmp/maestro_output/eonet_events.parquet
+      compression: zstd

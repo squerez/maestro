@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "maestro"
 version = "0.1.0"
-description = "Another data engineering framewokr"
+description = "A metadata-driven data engineering framework with plugin registry, observability, and lineage tracking"
 authors = ["squerez"]
 license = "MIT"
 readme = "README.md"
@@ -10,12 +10,89 @@ readme = "README.md"
 python = "^3.10"
 pyyaml = "^6.0"
 networkx = "^3.1"
-matplotlib = "^3.7.1"
+pydantic = "^2.0"
+loguru = "^0.7.0"
+tenacity = "^9.0"
+pybreaker = "^1.4"
+pyrate-limiter = "^4.0"
+requests = "^2.32"
+httpx = "^0.28"
+
+[tool.poetry.extras]
+observability = ["prometheus-client", "pyinstrument"]
+lineage = ["openlineage-python"]
+ui = ["fastapi", "uvicorn", "jinja2", "python-multipart"]
+quality = ["great-expectations"]
+databricks = ["databricks-sdk", "databricks-connect"]
+polars = ["polars"]
+all = [
+    "prometheus-client",
+    "pyinstrument",
+    "openlineage-python",
+    "fastapi",
+    "uvicorn",
+    "jinja2",
+    "python-multipart",
+    "great-expectations",
+    "databricks-sdk",
+    "databricks-connect",
+    "polars",
+]
+
+[tool.poetry.dependencies.prometheus-client]
+version = "^0.20"
+optional = true
+
+[tool.poetry.dependencies.pyinstrument]
+version = "^4.0"
+optional = true
+
+[tool.poetry.dependencies.openlineage-python]
+version = "^1.0"
+optional = true
+
+[tool.poetry.dependencies.fastapi]
+version = "^0.111"
+optional = true
+
+[tool.poetry.dependencies.uvicorn]
+version = "^0.30"
+optional = true
+
+[tool.poetry.dependencies.jinja2]
+version = "^3.1"
+optional = true
+
+[tool.poetry.dependencies.python-multipart]
+version = "^0.0.9"
+optional = true
+
+[tool.poetry.dependencies.great-expectations]
+version = "^1.0"
+optional = true
+
+[tool.poetry.dependencies.databricks-sdk]
+version = "^0.18"
+optional = true
+
+[tool.poetry.dependencies.databricks-connect]
+version = "^15.0"
+optional = true
+
+[tool.poetry.dependencies.polars]
+version = "^1.0"
+optional = true
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^7.3.1"
-pytest-cov = "^4.1.0"
+pytest = "^7.3"
+pytest-cov = "^4.1"
+pytest-mock = "^3.11"
+pytest-timeout = "^2.1"
+pytest-xdist = "^3.0"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

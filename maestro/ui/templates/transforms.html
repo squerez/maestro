@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<!-- Page header -->
+<div class="flex items-center gap-4 mb-8">
+    <h1 class="text-2xl font-bold text-white">Transform Registry</h1>
+    <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium bg-amber-900/30 text-amber-400 ring-1 ring-inset ring-amber-500/20">
+        {{ total }} transforms
+    </span>
+</div>
+
+<!-- Tag filter row -->
+<div class="flex flex-wrap items-center gap-2 mb-6">
+
+    <!-- All button -->
+    <a
+        href="/transforms"
+        class="inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-medium transition-colors
+            {% if active_tag == '' %}
+                bg-indigo-600 text-white
+            {% else %}
+                bg-gray-800 text-gray-300 hover:bg-gray-700
+            {% endif %}"
+    >
+        All
+    </a>
+
+    {% for t in all_tags %}
+    <a
+        href="?tag={{ t }}"
+        class="inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-medium transition-colors
+            {% if active_tag == t %}
+                bg-indigo-600 text-white
+            {% else %}
+                bg-gray-800 text-gray-300 hover:bg-gray-700
+            {% endif %}"
+    >
+        {{ t }}
+    </a>
+    {% endfor %}
+
+</div>
+
+{% if transforms %}
+
+    <!-- Transform cards grid -->
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {% for transform in transforms %}
+        <div class="bg-gray-900 rounded-xl border border-gray-800 p-5 flex flex-col gap-3">
+
+            <!-- Name + description -->
+            <div>
+                <p class="text-white font-semibold text-base">{{ transform.name }}</p>
+                {% if transform.description %}
+                    <p class="text-gray-400 text-sm mt-1">{{ transform.description }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Tags -->
+            {% if transform.tags %}
+            <div class="flex flex-wrap gap-1.5">
+                {% for tag in transform.tags %}
+                <span class="bg-indigo-900/40 text-indigo-300 text-xs px-2 py-0.5 rounded">
+                    {{ tag }}
+                </span>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Schemas -->
+            {% if transform.input_schema or transform.output_schema %}
+            <div class="border-t border-gray-800 pt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+
+                {% if transform.input_schema %}
+                <div>
+                    <p class="text-gray-500 text-xs font-medium uppercase tracking-wider mb-1.5">Input</p>
+                    <ul class="space-y-0.5">
+                        {% for field in transform.input_schema %}
+                        <li class="font-mono text-xs text-gray-500">
+                            <span class="text-gray-400">{{ field.name }}</span>:
+                            <span class="text-amber-600/80">{{ field.type }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                {% if transform.output_schema %}
+                <div>
+                    <p class="text-gray-500 text-xs font-medium uppercase tracking-wider mb-1.5">Output</p>
+                    <ul class="space-y-0.5">
+                        {% for field in transform.output_schema %}
+                        <li class="font-mono text-xs text-gray-500">
+                            <span class="text-gray-400">{{ field.name }}</span>:
+                            <span class="text-amber-600/80">{{ field.type }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+            </div>
+            {% endif %}
+
+        </div>
+        {% endfor %}
+    </div>
+
+{% else %}
+
+    <!-- Empty state -->
+    <div class="flex flex-col items-center justify-center py-24 text-center">
+        <svg class="w-10 h-10 text-gray-700 mb-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
+        </svg>
+        {% if active_tag %}
+            <p class="text-gray-400 text-sm">No transforms found for tag <span class="font-mono text-gray-300">{{ active_tag }}</span>.</p>
+            <a href="/transforms" class="mt-3 text-indigo-400 hover:text-indigo-300 text-sm transition-colors">Clear filter</a>
+        {% else %}
+            <p class="text-gray-400 text-sm">No transforms registered yet.</p>
+        {% endif %}
+    </div>
+
+{% endif %}
+
+{% endblock %}
