@@ -1,0 +1,41 @@
+name: celeba_attributes
+version: "1.0"
+
+runtime:
+  type: polars
+
+contract:
+  schema:
+    - {name: image_id,            type: string, nullable: false}
+    - {name: dominant_attributes, type: string, nullable: true}
+    - {name: attr_count,          type: int,    nullable: false}
+  producer: "kaggle/jessicali9530/celeba-dataset"
+  consumer: "maestro"
+  version: "1.0"
+
+observability:
+  prometheus_port: null
+  event_log: /tmp/maestro_output/events.jsonl
+  grafana_url: http://localhost:3000/d/maestro-pipelines-v1/maestro-pipelines?var-pipeline=celeba_attributes
+
+lineage:
+  enabled: true
+  backend_url: http://localhost:5000
+  namespace: maestro
+
+steps:
+  - name: ingest
+    plugin: source.local_zip_csv
+    params:
+      path: /home/svacx/Downloads/archive.zip
+      csv_name: list_attr_celeba.csv
+
+  - name: normalize
+    plugin: transform.normalize_celeba_attrs
+    params: {}
+
+  - name: write_parquet
+    plugin: sink.parquet
+    params:
+      path: /tmp/maestro_output/celeba_attributes.parquet
+      compression: zstd

@@ -1,0 +1,43 @@
+name: ai_career_threat_index
+version: "1.0"
+
+runtime:
+  type: polars
+
+contract:
+  schema:
+    - {name: slug,           type: string, nullable: false}
+    - {name: title,          type: string, nullable: false}
+    - {name: category,       type: string, nullable: false}
+    - {name: score,          type: int,    nullable: false}
+    - {name: risk_level,     type: string, nullable: false}
+    - {name: salary_low_usd, type: int,    nullable: false}
+    - {name: salary_high_usd,type: int,    nullable: false}
+  producer: "ai-career-threat-index-repo"
+  consumer: "maestro"
+  version: "1.0"
+
+observability:
+  prometheus_port: null
+  event_log: /tmp/maestro_output/events.jsonl
+  grafana_url: http://localhost:3000/d/maestro-pipelines-v1/maestro-pipelines?var-pipeline=ai_career_threat_index
+
+lineage:
+  enabled: true
+  backend_url: http://localhost:5000
+  namespace: maestro
+
+steps:
+  - name: ingest
+    plugin: source.http_csv
+    params:
+      url: https://raw.githubusercontent.com/Jott2121/ai-career-threat-index/main/data/ai-career-threat-index.csv
+
+  - name: enrich
+    plugin: transform.enrich_career_index
+    params: {}
+
+  - name: write_parquet
+    plugin: sink.parquet
+    params:
+      path: /tmp/maestro_output/ai_career_threat_index.parquet

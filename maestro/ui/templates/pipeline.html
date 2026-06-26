@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<!-- Breadcrumb -->
+<div class="mb-6">
+    <a
+        href="/"
+        class="inline-flex items-center gap-1.5 text-gray-400 hover:text-white text-sm transition-colors"
+    >
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+        </svg>
+        All Pipelines
+    </a>
+</div>
+
+<!-- Page header -->
+<div class="flex items-center gap-4 mb-8">
+    <h1 class="text-2xl font-bold text-white">{{ name }}</h1>
+
+    {% if pipeline is not none %}
+        {% if pipeline.status == 'success' %}
+            <span class="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium bg-green-900/50 text-green-400 ring-1 ring-inset ring-green-500/20">
+                success
+            </span>
+        {% elif pipeline.status == 'failed' %}
+            <span class="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium bg-red-900/50 text-red-400 ring-1 ring-inset ring-red-500/20">
+                failed
+            </span>
+        {% elif pipeline.status == 'partial' %}
+            <span class="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium bg-yellow-900/50 text-yellow-400 ring-1 ring-inset ring-yellow-500/20">
+                partial
+            </span>
+        {% else %}
+            <span class="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium bg-gray-800 text-gray-400 ring-1 ring-inset ring-gray-600/20">
+                {{ pipeline.status }}
+            </span>
+        {% endif %}
+    {% endif %}
+</div>
+
+{% if pipeline is none %}
+
+    <!-- No checkpoint found -->
+    <div class="bg-yellow-900/20 border border-yellow-700/30 rounded-xl p-6">
+        <div class="flex items-start gap-3">
+            <svg class="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+            </svg>
+            <div>
+                <p class="text-yellow-400 font-medium text-sm">No checkpoint found</p>
+                <p class="text-yellow-300/70 text-sm mt-1">
+                    No checkpoint found for <span class="font-mono font-medium text-yellow-300">{{ name }}</span>.
+                    This pipeline has not run yet or its checkpoint has been cleared.
+                </p>
+            </div>
+        </div>
+    </div>
+
+{% else %}
+
+    <!-- Detail card -->
+    <div class="bg-gray-900 rounded-xl border border-gray-800 p-6 mb-6">
+        <h2 class="text-white font-semibold text-base mb-6">Run Details</h2>
+        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+
+            <!-- Last Run -->
+            <div>
+                <p class="text-gray-400 text-xs uppercase tracking-wider mb-1.5">Last Run</p>
+                <p class="text-white text-lg font-medium">{{ pipeline.last_run }}</p>
+            </div>
+
+            <!-- Status -->
+            <div>
+                <p class="text-gray-400 text-xs uppercase tracking-wider mb-1.5">Status</p>
+                <p class="text-white text-lg font-medium">{{ pipeline.status }}</p>
+            </div>
+
+            <!-- Records Processed -->
+            <div>
+                <p class="text-gray-400 text-xs uppercase tracking-wider mb-1.5">Records Processed</p>
+                <p class="text-white text-lg font-medium">{{ pipeline.records }}</p>
+            </div>
+
+            <!-- Watermark -->
+            <div>
+                <p class="text-gray-400 text-xs uppercase tracking-wider mb-1.5">Watermark</p>
+                <p class="text-white text-lg font-medium font-mono">{{ pipeline.watermark }}</p>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Grafana -->
+    <div class="bg-gray-900 rounded-xl border border-gray-800 p-6">
+        <h2 class="text-white font-semibold text-base mb-4">Metrics</h2>
+
+        {% if pipeline.grafana_url %}
+            <a
+                href="{{ pipeline.grafana_url }}"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors"
+            >
+                Open Grafana Dashboard
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                </svg>
+            </a>
+            <p class="text-gray-500 text-sm mt-3">{{ pipeline.grafana_url }}</p>
+        {% else %}
+            <div class="rounded-lg bg-gray-800/60 border border-gray-700/50 p-4 text-sm text-gray-400 space-y-3">
+                <p class="text-gray-300 font-medium">Grafana not configured for this pipeline.</p>
+                <p>Add <span class="font-mono text-amber-400">observability.grafana_url</span> to your pipeline spec:</p>
+                <pre class="bg-gray-950 rounded-md p-3 text-xs text-gray-300 overflow-x-auto">observability:
+  prometheus_port: 8000
+  grafana_url: http://localhost:3000/d/&lt;dashboard-id&gt;</pre>
+                <p class="text-gray-500">
+                    Maestro exposes Prometheus metrics on
+                    <span class="font-mono text-gray-400">:&lt;prometheus_port&gt;/metrics</span>.
+                    Point a Grafana data source at that endpoint, then paste the dashboard URL above.
+                </p>
+            </div>
+        {% endif %}
+    </div>
+
+{% endif %}
+
+{% endblock %}

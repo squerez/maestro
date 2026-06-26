@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<!-- Page header -->
+<div class="mb-8">
+    <h1 class="text-2xl font-bold text-white">Pipelines</h1>
+    <p class="mt-1 text-gray-400 text-sm">Recent run status across all registered pipelines</p>
+</div>
+
+<!-- Stats row -->
+<div class="grid grid-cols-2 gap-4 mb-8 lg:grid-cols-4">
+
+    <!-- Total Pipelines -->
+    <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+        <p class="text-gray-400 text-sm">Total Pipelines</p>
+        <p class="text-white text-2xl font-bold mt-1">{{ stats.total }}</p>
+    </div>
+
+    <!-- Success -->
+    <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+        <p class="text-gray-400 text-sm">Success</p>
+        <p class="text-green-400 text-2xl font-bold mt-1">{{ stats.success }}</p>
+    </div>
+
+    <!-- Failed -->
+    <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+        <p class="text-gray-400 text-sm">Failed</p>
+        <p class="text-red-400 text-2xl font-bold mt-1">{{ stats.failed }}</p>
+    </div>
+
+    <!-- Total Records -->
+    <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+        <p class="text-gray-400 text-sm">Total Records</p>
+        <p class="text-white text-2xl font-bold mt-1">{{ stats.total_records }}</p>
+    </div>
+
+</div>
+
+<!-- Pipeline table -->
+<div class="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+
+    <div class="px-6 py-4 border-b border-gray-800">
+        <h2 class="text-white font-semibold text-base">All Pipelines</h2>
+    </div>
+
+    {% if pipelines %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-gray-800">
+                        <th class="text-left text-gray-400 font-medium px-6 py-3">Name</th>
+                        <th class="text-left text-gray-400 font-medium px-6 py-3">Status</th>
+                        <th class="text-left text-gray-400 font-medium px-6 py-3">Last Run</th>
+                        <th class="text-left text-gray-400 font-medium px-6 py-3">Records</th>
+                        <th class="text-left text-gray-400 font-medium px-6 py-3">Watermark</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800">
+                    {% for p in pipelines %}
+                    <tr class="hover:bg-gray-800/50 transition-colors">
+
+                        <!-- Name -->
+                        <td class="px-6 py-4">
+                            <a
+                                href="/pipelines/{{ p.name }}"
+                                class="text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
+                            >
+                                {{ p.name }}
+                            </a>
+                        </td>
+
+                        <!-- Status badge -->
+                        <td class="px-6 py-4">
+                            {% if p.status == 'success' %}
+                                <span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-green-900/50 text-green-400 ring-1 ring-inset ring-green-500/20">
+                                    success
+                                </span>
+                            {% elif p.status == 'failed' %}
+                                <span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-red-900/50 text-red-400 ring-1 ring-inset ring-red-500/20">
+                                    failed
+                                </span>
+                            {% elif p.status == 'partial' %}
+                                <span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-yellow-900/50 text-yellow-400 ring-1 ring-inset ring-yellow-500/20">
+                                    partial
+                                </span>
+                            {% else %}
+                                <span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-gray-800 text-gray-400 ring-1 ring-inset ring-gray-600/20">
+                                    {{ p.status }}
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Last Run -->
+                        <td class="px-6 py-4 text-gray-300">
+                            {{ p.last_run }}
+                        </td>
+
+                        <!-- Records -->
+                        <td class="px-6 py-4 text-gray-300">
+                            {{ p.records }}
+                        </td>
+
+                        <!-- Watermark -->
+                        <td class="px-6 py-4 text-gray-400 font-mono text-xs">
+                            {{ p.watermark }}
+                        </td>
+
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <!-- Empty state -->
+        <div class="flex flex-col items-center justify-center py-20 text-center">
+            <svg class="w-10 h-10 text-gray-700 mb-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 2.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125m16.5 2.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
+            </svg>
+            <p class="text-gray-400 text-sm">No pipeline runs recorded yet.</p>
+        </div>
+    {% endif %}
+
+</div>
+
+{% endblock %}

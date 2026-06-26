@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a1830"/>
+      <stop offset="100%" stop-color="#0F0E17"/>
+    </linearGradient>
+    <linearGradient id="barA" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#3730A3"/>
+      <stop offset="100%" stop-color="#818CF8"/>
+    </linearGradient>
+    <linearGradient id="barB" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#4338CA"/>
+      <stop offset="100%" stop-color="#A5B4FC"/>
+    </linearGradient>
+    <linearGradient id="baton" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#D97706"/>
+      <stop offset="100%" stop-color="#FDE68A"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="100" height="100" rx="18" fill="url(#bg)"/>
+
+  <!-- Equalizer bars -->
+  <rect x="24" y="44" width="12" height="38" rx="3" fill="url(#barA)"/>
+  <rect x="44" y="26" width="12" height="56" rx="3" fill="url(#barB)"/>
+  <rect x="64" y="32" width="12" height="50" rx="3" fill="url(#barA)"/>
+
+  <!-- Conductor's baton -->
+  <line x1="16" y1="90" x2="84" y2="20" stroke="url(#baton)" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Handle -->
+  <circle cx="16" cy="90" r="5.5" fill="#F59E0B"/>
+  <circle cx="16" cy="90" r="3"   fill="#FDE68A"/>
+
+  <!-- Pipeline nodes at bar intersections -->
+  <circle cx="30" cy="76" r="3.5" fill="#FDE68A" stroke="#0F0E17" stroke-width="1.5"/>
+  <circle cx="50" cy="55" r="3.5" fill="#FDE68A" stroke="#0F0E17" stroke-width="1.5"/>
+  <circle cx="70" cy="34" r="3.5" fill="#FDE68A" stroke="#0F0E17" stroke-width="1.5"/>
+
+  <!-- Tip -->
+  <circle cx="84" cy="20" r="2" fill="#FDE68A"/>
+</svg>
