@@ -1,8 +1,9 @@
-from toolbox.maestro.pipeline.dryrun import DryRunResult, StepDryRunResult
-from toolbox.maestro.pipeline.engine import PipelineEngine
-from toolbox.maestro.pipeline.spec import (
+from maestro.pipeline.dryrun import DryRunResult, StepDryRunResult
+from maestro.pipeline.engine import PipelineEngine
+from maestro.pipeline.spec import (
     DataContract,
     DLQConfig,
+    HandoffConfig,
     LineageConfig,
     ObservabilityConfig,
     PipelineSpec,
@@ -11,7 +12,7 @@ from toolbox.maestro.pipeline.spec import (
     SLAConfig,
     StepSpec,
 )
-from toolbox.maestro.pipeline.state import Checkpoint, CheckpointStore
+from maestro.pipeline.state import Checkpoint, CheckpointStore
 
 __all__ = [
     "PipelineEngine",
@@ -24,6 +25,7 @@ __all__ = [
     "SLAConfig",
     "LineageConfig",
     "ObservabilityConfig",
+    "HandoffConfig",
     "Checkpoint",
     "CheckpointStore",
     "DryRunResult",

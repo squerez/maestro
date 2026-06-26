@@ -1,4 +1,4 @@
-from toolbox.maestro.lineage.openlineage import (
+from maestro.lineage.openlineage import (
     DatasetRef,
     OpenLineageEmitter,
     datasets_from_spec,

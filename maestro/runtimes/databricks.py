@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Callable, Dict
 
-from toolbox.maestro.plugins.plugin import plugin
+from maestro.plugins.plugin import plugin
 
 
 @plugin(kind="runtime", name="databricks")
@@ -47,6 +47,12 @@ class DatabricksRuntime:
         params: Dict[str, Any],
     ) -> Any:
         return fn(data, params)
+
+    def to_pandas(self, data: Any) -> "pd.DataFrame":
+        return data.toPandas()
+
+    def from_pandas(self, df: "pd.DataFrame") -> Any:
+        return self._spark.createDataFrame(df)
 
     @staticmethod
     def _build_session(cluster_id: str | None):

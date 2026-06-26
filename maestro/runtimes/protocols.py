@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Dict, Protocol, TypeVar
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 DataFrameT = TypeVar("DataFrameT")
 
@@ -45,4 +48,16 @@ class Runtime(Protocol[DataFrameT]):
             fn: A pure transformation function.
             data: Input DataFrame.
             params: Passed through to *fn*.
+        """
+
+    def to_pandas(self, data: DataFrameT) -> "pd.DataFrame":
+        """
+        Convert a native DataFrame to a pandas DataFrame for cross-runtime handoff.
+        Only called when the next step runs on a different runtime.
+        """
+
+    def from_pandas(self, df: "pd.DataFrame") -> DataFrameT:
+        """
+        Convert a pandas DataFrame back to the runtime's native type.
+        Only called when the previous step ran on a different runtime.
         """

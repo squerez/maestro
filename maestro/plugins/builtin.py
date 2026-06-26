@@ -6,7 +6,7 @@ import zipfile
 from pathlib import Path
 from typing import Any, Dict
 
-from toolbox.maestro.plugins.plugin import plugin
+from maestro.plugins.plugin import plugin
 
 
 def _read_csv_from_zip(zip_path: Path, csv_name: str, sep: str) -> Any:

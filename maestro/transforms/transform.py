@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Callable, Dict, List, Optional, Type, Union
 
-from toolbox.maestro.pipeline.spec import ColumnSchema
-from toolbox.maestro.transforms.registry import TransformMeta, TransformRegistry
+from maestro.pipeline.spec import ColumnSchema
+from maestro.transforms.registry import TransformMeta, TransformRegistry
 
 
 def transform(

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from toolbox.maestro.plugins.registry import PluginRegistry
+from maestro.plugins.registry import PluginRegistry
 
 
 def plugin(kind: str, name: str):

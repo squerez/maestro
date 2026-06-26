@@ -16,9 +16,9 @@ class MaestroConfig:
     checkpoint_dir: str = "~/.maestro/checkpoints"
     plugin_packages: List[str] = field(
         default_factory=lambda: [
-            "toolbox.maestro.runtimes",
-            "toolbox.maestro.plugins",
-            "toolbox.maestro.transforms",
+            "maestro.runtimes",
+            "maestro.plugins",
+            "maestro.transforms",
         ]
     )
     default_runtime: str = "polars"

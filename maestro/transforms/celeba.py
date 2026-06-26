@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import polars as pl
+from typing import Any
 
-from toolbox.maestro.transforms.transform import transform
+from maestro.transforms.transform import transform
 
 _ATTR_COLS = [
     "5_o_Clock_Shadow", "Arched_Eyebrows", "Attractive", "Bags_Under_Eyes",
@@ -32,7 +32,9 @@ _ATTR_COLS = [
     ],
 )
 class NormalizeCelebAAttrsTransform:
-    def run(self, data: pl.LazyFrame, params: dict) -> pl.LazyFrame:
+    def run(self, data: Any, params: dict) -> Any:
+        import polars as pl
+
         available = set(data.collect_schema().names())
         attr_cols = [c for c in _ATTR_COLS if c in available]
 
@@ -48,7 +50,5 @@ class NormalizeCelebAAttrsTransform:
         ).alias("dominant_attributes")
 
         attr_count = pl.sum_horizontal([pl.col(c).cast(pl.Int32) for c in attr_cols]).alias("attr_count")
-
-        id_col = "image_id" if "image_id" in available else data.collect_schema().names()[0]
 
         return data.with_columns(bool_exprs).with_columns([dominant, attr_count])

@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Dict
+from typing import TYPE_CHECKING, Any, Callable, Dict
 
-import polars as pl
+from maestro.plugins.plugin import plugin
 
-from toolbox.maestro.plugins.plugin import plugin
+if TYPE_CHECKING:
+    import polars as pl
 
 
 @plugin(kind="runtime", name="polars")
@@ -14,9 +15,13 @@ class PolarsRuntime:
 
     Reads and writes via Polars LazyFrames. Suitable for local development,
     testing, and workloads that fit in memory or can be streamed.
+
+    Requires: pip install "maestro[polars]"
     """
 
-    def read(self, source: str, params: Dict[str, Any]) -> pl.LazyFrame:
+    def read(self, source: str, params: Dict[str, Any]) -> "pl.LazyFrame":
+        import polars as pl
+
         fmt = params.get("format", "delta")
         match fmt:
             case "delta":
@@ -30,7 +35,7 @@ class PolarsRuntime:
             case _:
                 raise ValueError(f"Unsupported format for PolarsRuntime: {fmt!r}")
 
-    def write(self, data: pl.LazyFrame, destination: str, params: Dict[str, Any]) -> None:
+    def write(self, data: "pl.LazyFrame", destination: str, params: Dict[str, Any]) -> None:
         fmt = params.get("format", "delta")
         mode = params.get("mode", "append")
         match fmt:
@@ -49,11 +54,23 @@ class PolarsRuntime:
 
     def execute(
         self,
-        fn: Callable[[pl.LazyFrame, Dict[str, Any]], pl.LazyFrame],
-        data: pl.LazyFrame,
+        fn: "Callable[[pl.LazyFrame, Dict[str, Any]], pl.LazyFrame]",
+        data: "pl.LazyFrame",
         params: Dict[str, Any],
-    ) -> pl.LazyFrame:
+    ) -> "pl.LazyFrame":
         return fn(data, params)
+
+    def to_pandas(self, data: "pl.LazyFrame | pl.DataFrame") -> "pd.DataFrame":
+        import polars as pl
+
+        if isinstance(data, pl.LazyFrame):
+            data = data.collect()
+        return data.to_pandas()
+
+    def from_pandas(self, df: "pd.DataFrame") -> "pl.LazyFrame":
+        import polars as pl
+
+        return pl.from_pandas(df).lazy()
 
 
 def _delta_read_opts(params: Dict[str, Any]) -> Dict[str, Any]:

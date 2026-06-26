@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import polars as pl
+from typing import Any
 
-from toolbox.maestro.transforms.transform import transform
+from maestro.transforms.transform import transform
 
 
 @transform(
@@ -10,26 +10,46 @@ from toolbox.maestro.transforms.transform import transform
     tags=["enrichment", "career"],
     description="Enriches the AI career threat index with derived salary and score-trend columns.",
     input_schema=[
-        {"name": "slug",            "type": "string", "nullable": False},
-        {"name": "title",           "type": "string", "nullable": False},
-        {"name": "score",           "type": "int",    "nullable": False},
-        {"name": "salary_low_usd",  "type": "int",    "nullable": False},
-        {"name": "salary_high_usd", "type": "int",    "nullable": False},
+        {"name": "slug",                "type": "string", "nullable": False},
+        {"name": "title",               "type": "string", "nullable": False},
+        {"name": "category",            "type": "string", "nullable": False},
+        {"name": "score",               "type": "int",    "nullable": False},
+        {"name": "risk_level",          "type": "string", "nullable": False},
+        {"name": "salary_low_usd",      "type": "int",    "nullable": False},
+        {"name": "salary_high_usd",     "type": "int",    "nullable": False},
+        {"name": "score_q1_2025",       "type": "int",    "nullable": False},
+        {"name": "score_q2_2026",       "type": "int",    "nullable": False},
+        {"name": "salary_trend",        "type": "string", "nullable": True},
+        {"name": "tasks_at_risk_count", "type": "int",    "nullable": True},
+        {"name": "tasks_growing_count", "type": "int",    "nullable": True},
+        {"name": "defense_skill_1",     "type": "string", "nullable": True},
+        {"name": "defense_skill_2",     "type": "string", "nullable": True},
+        {"name": "defense_skill_3",     "type": "string", "nullable": True},
+        {"name": "insight",             "type": "string", "nullable": True},
     ],
     output_schema=[
-        {"name": "slug",            "type": "string", "nullable": False},
-        {"name": "title",           "type": "string", "nullable": False},
-        {"name": "category",        "type": "string", "nullable": False},
-        {"name": "score",           "type": "int",    "nullable": False},
-        {"name": "risk_level",      "type": "string", "nullable": False},
-        {"name": "salary_low_usd",  "type": "int",    "nullable": False},
-        {"name": "salary_high_usd", "type": "int",    "nullable": False},
-        {"name": "salary_mid_usd",  "type": "int",    "nullable": False},
-        {"name": "score_delta",     "type": "int",    "nullable": False},
+        {"name": "slug",                "type": "string", "nullable": False},
+        {"name": "title",               "type": "string", "nullable": False},
+        {"name": "category",            "type": "string", "nullable": False},
+        {"name": "score",               "type": "int",    "nullable": False},
+        {"name": "risk_level",          "type": "string", "nullable": False},
+        {"name": "salary_low_usd",      "type": "int",    "nullable": False},
+        {"name": "salary_high_usd",     "type": "int",    "nullable": False},
+        {"name": "salary_mid_usd",      "type": "int",    "nullable": False},
+        {"name": "score_delta",         "type": "int",    "nullable": False},
+        {"name": "salary_trend",        "type": "string", "nullable": True},
+        {"name": "tasks_at_risk_count", "type": "int",    "nullable": True},
+        {"name": "tasks_growing_count", "type": "int",    "nullable": True},
+        {"name": "defense_skill_1",     "type": "string", "nullable": True},
+        {"name": "defense_skill_2",     "type": "string", "nullable": True},
+        {"name": "defense_skill_3",     "type": "string", "nullable": True},
+        {"name": "insight",             "type": "string", "nullable": True},
     ],
 )
 class EnrichCareerIndexTransform:
-    def run(self, data: pl.LazyFrame, params: dict) -> pl.LazyFrame:
+    def run(self, data: Any, params: dict) -> Any:
+        import polars as pl
+
         return (
             data.with_columns(
                 # mid-point salary

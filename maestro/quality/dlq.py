@@ -2,12 +2,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
-import polars as pl
 from loguru import logger
 
-from toolbox.maestro.pipeline.spec import DLQConfig
+from maestro.pipeline.spec import DLQConfig
+
+if TYPE_CHECKING:
+    import polars as pl
 
 
 class DataQualityError(RuntimeError):
@@ -33,6 +35,7 @@ class DLQRouter:
         self._config = config
 
     def route(self, data: pl.DataFrame, failed_mask: pl.Series) -> tuple[pl.DataFrame, DLQResult]:
+        import polars as pl
         config = self._config
         strategy = DLQStrategy(config.strategy)
         failed_count = int(failed_mask.sum())
@@ -53,10 +56,8 @@ class DLQRouter:
                 logger.warning(
                     "DLQ strategy is 'quarantine' but no destination is configured; falling back to 'skip'"
                 )
-                strategy = DLQStrategy.SKIP
             else:
-                failed_df = data.filter(failed_mask)
-                failed_df.write_parquet(config.destination)
+                data.filter(failed_mask).write_parquet(config.destination)
                 return clean, DLQResult(
                     strategy=strategy,
                     passed_count=len(clean),
@@ -64,9 +65,8 @@ class DLQRouter:
                     destination=config.destination,
                 )
 
-        # SKIP (or quarantine fallback)
         return clean, DLQResult(
-            strategy=strategy,
+            strategy=DLQStrategy.SKIP,
             passed_count=len(clean),
             rejected_count=failed_count,
             destination=None,

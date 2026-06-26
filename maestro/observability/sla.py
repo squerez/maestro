@@ -3,10 +3,10 @@ from __future__ import annotations
 import time
 from typing import Optional
 
-from toolbox.maestro.pipeline.spec import SLAConfig
+from maestro.pipeline.spec import SLAConfig
 
 from .events import EventLogger
-from .metrics import MaestroMetrics
+from .metrics import MaestroMetrics, NullMetrics
 
 
 class SLATracker:
@@ -14,7 +14,7 @@ class SLATracker:
         self,
         pipeline: str,
         config: SLAConfig,
-        metrics: MaestroMetrics | None = None,
+        metrics: MaestroMetrics | NullMetrics | None = None,
         event_logger: EventLogger | None = None,
     ) -> None:
         self._pipeline = pipeline
@@ -50,7 +50,7 @@ class SLATracker:
                 channel_info,
             )
 
-            if self._metrics is not None:
+            if self._metrics is not None:  # None only when explicitly passed by tests
                 self._metrics.record_sla_breach(self._pipeline)
 
             if self._event_logger is not None:

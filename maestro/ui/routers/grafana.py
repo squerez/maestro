@@ -38,9 +38,7 @@ async def grafana_page(request: Request):
             "active": "grafana",
             "grafana_url": grafana_url,
             "pipeline_links": pipeline_links,
-            "dashboard_path": str(_DASHBOARD_PATH.relative_to(Path(__file__).parent.parent.parent.parent.parent))
-            if _DASHBOARD_PATH.exists()
-            else None,
+            "dashboard_path": str(_DASHBOARD_PATH) if _DASHBOARD_PATH.exists() else None,
         },
     )
 

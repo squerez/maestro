@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from loguru import logger
 
-from toolbox.maestro.pipeline.spec import LineageConfig, PipelineSpec
+from maestro.pipeline.spec import LineageConfig, PipelineSpec
 
 
 @dataclass
@@ -36,9 +36,12 @@ def datasets_from_spec(
 
 
 def new_run_id() -> str:
-    from openlineage.client.uuid import generate_new_uuid
-
-    return str(generate_new_uuid())
+    try:
+        from openlineage.client.uuid import generate_new_uuid
+        return str(generate_new_uuid())
+    except ModuleNotFoundError:
+        import uuid
+        return str(uuid.uuid4())
 
 
 class OpenLineageEmitter:

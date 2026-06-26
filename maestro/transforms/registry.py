@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
-from toolbox.maestro.pipeline.spec import ColumnSchema
+from maestro.pipeline.spec import ColumnSchema
 
 
 @dataclass

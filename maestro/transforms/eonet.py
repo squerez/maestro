@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import polars as pl
+from typing import Any
 
-from toolbox.maestro.transforms.transform import transform
+from maestro.transforms.transform import transform
 
 
 @transform(
@@ -29,7 +29,8 @@ from toolbox.maestro.transforms.transform import transform
     ],
 )
 class NormalizeEonetEventsTransform:
-    def run(self, data: pl.LazyFrame, params: dict) -> pl.LazyFrame:
+    def run(self, data: Any, params: dict) -> Any:
+        import polars as pl
         df = data.collect()
         rows = []
 

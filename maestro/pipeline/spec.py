@@ -57,11 +57,31 @@ class RuntimeConfig(BaseModel):
     options: Dict[str, Any] = Field(default_factory=dict)
 
 
+class HandoffConfig(BaseModel):
+    """
+    Controls how data is transferred when consecutive steps run on different runtimes.
+
+    strategy:
+      auto   — try in-memory pandas bridge first; fall back to path on MemoryError
+      memory — always use pandas bridge; fail if data does not fit
+      path   — always write to temp_path and read back (requires temp_path)
+
+    temp_path: cloud URI used for path-based handoff, e.g.
+      s3://my-bucket/maestro-tmp/
+      abfss://container@account.dfs.core.windows.net/maestro-tmp/
+    """
+
+    strategy: Literal["auto", "memory", "path"] = "auto"
+    temp_path: Optional[str] = None
+    format: Literal["parquet", "delta"] = "parquet"
+
+
 class StepSpec(BaseModel):
     name: str
     plugin: str
     params: Dict[str, Any] = Field(default_factory=dict)
     on_failure: Optional[Literal["skip", "quarantine", "fail"]] = None
+    runtime: Optional[RuntimeConfig] = None
 
 
 class PipelineSpec(BaseModel):
@@ -74,6 +94,7 @@ class PipelineSpec(BaseModel):
     dlq: Optional[DLQConfig] = None
     lineage: Optional[LineageConfig] = None
     observability: Optional[ObservabilityConfig] = None
+    handoff: Optional[HandoffConfig] = None
     steps: List[StepSpec] = Field(default_factory=list)
     dry_run: bool = False
     preview_rows: int = 5

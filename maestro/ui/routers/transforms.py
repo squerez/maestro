@@ -13,7 +13,7 @@ def _get_templates(request: Request) -> Jinja2Templates:
 
 def _transforms_list() -> list[dict]:
     try:
-        from toolbox.maestro.transforms.registry import TransformRegistry
+        from maestro.transforms.registry import TransformRegistry
 
         out = []
         for meta in TransformRegistry.list_all():

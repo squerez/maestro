@@ -11,6 +11,7 @@ class StepDryRunResult:
     records_in: int
     records_out: int
     duration_seconds: float
+    runtime_type: str = ""
     skipped: bool = False
     preview: Optional[Any] = None
 
@@ -34,8 +35,10 @@ class DryRunResult:
         ]
         for s in self.step_results:
             tag = "SKIP" if s.skipped else " OK "
+            runtime = f"  [{s.runtime_type}]" if s.runtime_type else ""
             lines.append(
                 f"  [{tag}] {s.name:<30} {s.plugin:<40} "
                 f"{s.records_in:>6} → {s.records_out:<6} rows   {s.duration_seconds:.3f}s"
+                f"{runtime}"
             )
         return "\n".join(lines)

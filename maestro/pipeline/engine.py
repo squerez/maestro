@@ -1,16 +1,18 @@
 from __future__ import annotations
 
+import json
 import time
+import uuid
 from contextlib import nullcontext
 from typing import Any, Dict, List, Optional
 
 from loguru import logger
 
-from toolbox.maestro.pipeline.dryrun import DryRunResult, StepDryRunResult
-from toolbox.maestro.pipeline.spec import PipelineSpec, RuntimeConfig, StepSpec
-from toolbox.maestro.pipeline.state import Checkpoint, CheckpointStore
-from toolbox.maestro.plugins.discovery import discover_plugins
-from toolbox.maestro.plugins.registry import PluginRegistry
+from maestro.pipeline.dryrun import DryRunResult, StepDryRunResult
+from maestro.pipeline.spec import HandoffConfig, PipelineSpec, RuntimeConfig, StepSpec
+from maestro.pipeline.state import Checkpoint, CheckpointStore
+from maestro.plugins.discovery import discover_plugins
+from maestro.plugins.registry import PluginRegistry
 
 
 class PipelineEngine:
@@ -26,6 +28,9 @@ class PipelineEngine:
     ) -> None:
         self._store = checkpoint_store or CheckpointStore()
         self._plugin_packages = plugin_packages or []
+        # Keyed by (runtime_type, json-serialised options) so the same Databricks
+        # session is reused across steps rather than reconnected on each one.
+        self._runtime_cache: Dict[tuple, Any] = {}
 
     def run(
         self,
@@ -35,6 +40,9 @@ class PipelineEngine:
     ) -> Optional[DryRunResult]:
         """
         Execute the pipeline described by *spec*.
+
+        Steps may each declare their own runtime override; the engine handles
+        cross-runtime data handoff automatically (pandas bridge or path-based).
 
         Args:
             spec: The pipeline specification.
@@ -46,7 +54,6 @@ class PipelineEngine:
         for pkg in self._plugin_packages:
             discover_plugins(pkg)
 
-        runtime = self._build_runtime(spec.runtime)
         metrics, event_logger = self._init_observability(spec)
         lineage, run_id, inputs, outputs = self._init_lineage(spec)
 
@@ -63,13 +70,14 @@ class PipelineEngine:
         if lineage and not is_dry_run:
             lineage.start(spec.name, run_id, inputs, outputs)
 
-        checkpoint = self._store.load(spec.name)
         sla_ctx = self._build_sla_ctx(spec, metrics, event_logger)
         flamegraph_ctx = self._build_flamegraph_ctx(spec)
 
         current_data: Any = None
+        current_runtime: Any = None
         total_records = 0
         step_results: List[StepDryRunResult] = []
+        run_metadata: Dict[str, Any] = {}
 
         with flamegraph_ctx:
             with sla_ctx:
@@ -79,9 +87,25 @@ class PipelineEngine:
                         kind = step.plugin.split(".", 1)[0]
                         is_sink = kind == "sink"
 
+                        step_runtime = self._get_or_build_runtime(step.runtime or spec.runtime)
+                        runtime_type = type(step_runtime).__name__
+
+                        # Cross-runtime handoff when the step switches engines.
+                        if current_data is not None and current_runtime is not step_runtime:
+                            current_data = self._handoff(
+                                data=current_data,
+                                from_runtime=current_runtime,
+                                to_runtime=step_runtime,
+                                handoff_cfg=spec.handoff,
+                                pipeline=spec.name,
+                                step_name=step.name,
+                                is_dry_run=is_dry_run,
+                            )
+
                         event_logger.step_start(spec.name, step.name)
                         logger.info(
                             f"[{spec.name}] step={step.name} plugin={step.plugin}"
+                            f" runtime={runtime_type}"
                             + (" [DRY RUN SKIP]" if is_dry_run and is_sink else "")
                         )
 
@@ -97,20 +121,24 @@ class PipelineEngine:
                                     records_in=records_in,
                                     records_out=records_out,
                                     duration_seconds=step_dur,
+                                    runtime_type=runtime_type,
                                     skipped=True,
                                 )
                             )
                             event_logger.step_end(spec.name, step.name, records_out, step_dur)
+                            current_runtime = step_runtime
                             continue
 
                         current_data = self._execute_step(
                             step=step,
-                            runtime=runtime,
+                            runtime=step_runtime,
                             data=current_data,
                             spec=spec,
                             metrics=metrics,
                             event_logger=event_logger,
+                            run_metadata=run_metadata,
                         )
+                        current_runtime = step_runtime
 
                         records_out = _count_records(current_data)
                         total_records += records_out
@@ -127,21 +155,21 @@ class PipelineEngine:
                                     records_in=records_in,
                                     records_out=records_out,
                                     duration_seconds=step_dur,
+                                    runtime_type=runtime_type,
                                     preview=preview,
                                 )
                             )
 
                     if not is_dry_run:
-                        extra = {}
                         if spec.observability and spec.observability.grafana_url:
-                            extra["grafana_url"] = spec.observability.grafana_url
+                            run_metadata["grafana_url"] = spec.observability.grafana_url
                         self._store.save(
                             Checkpoint(
                                 pipeline=spec.name,
                                 last_run=CheckpointStore.now(),
                                 status="success",
                                 records_processed=total_records,
-                                extra=extra,
+                                extra=run_metadata,
                             )
                         )
 
@@ -198,72 +226,41 @@ class PipelineEngine:
         spec: PipelineSpec,
         metrics: Any,
         event_logger: Any,
+        run_metadata: Optional[Dict[str, Any]] = None,
     ) -> Any:
         kind, name = step.plugin.split(".", 1)
 
-        # "quality" and "transform" are built-in lifecycle kinds dispatched
-        # directly to their dedicated handlers rather than through PluginRegistry.
-        # This is intentional: they carry engine-level context (spec, metrics,
-        # event_logger) that the generic plugin interface does not expose.
+        # "quality" and "transform" bypass PluginRegistry because they carry
+        # engine-level context (spec, metrics, event_logger) that the generic
+        # plugin interface does not expose.
         if kind == "quality":
-            return self._execute_quality_step(step, data, spec, metrics, event_logger)
+            from maestro.quality.runner import run_quality_step
+
+            data_out, dq_result = run_quality_step(
+                data=data,
+                quality_cfg=spec.quality,
+                dlq_cfg=spec.dlq,
+                step=step,
+                metrics=metrics,
+                event_logger=event_logger,
+                pipeline=spec.name,
+            )
+            if dq_result is not None and run_metadata is not None:
+                run_metadata.setdefault("dq_results", {})[dq_result.suite] = {
+                    "success": dq_result.success,
+                    "statistics": dq_result.statistics,
+                    "failed_expectations": dq_result.failed_expectations,
+                }
+            return data_out
 
         if kind == "transform":
             return self._execute_transform_step(step, data)
 
         plugin_cls = PluginRegistry.get(kind, name)
-        instance = plugin_cls(runtime=runtime)
-        return instance.run(data, step.params)
-
-    def _execute_quality_step(
-        self,
-        step: StepSpec,
-        data: Any,
-        spec: PipelineSpec,
-        metrics: Any,
-        event_logger: Any,
-    ) -> Any:
-        from toolbox.maestro.quality.dlq import DataQualityError, DLQRouter
-        from toolbox.maestro.quality.expectations import GXValidator
-
-        quality_cfg = spec.quality
-        if quality_cfg is None:
-            return data
-
-        df = _to_eager(data)
-        validator = GXValidator()
-        result = validator.validate(df, quality_cfg)
-
-        event_logger.dq_result(
-            spec.name, quality_cfg.suite, result.success, len(result.failed_expectations)
-        )
-
-        if not result.success:
-            metrics.record_dq_failure(spec.name, quality_cfg.suite)
-            logger.warning(
-                f"[{spec.name}] DQ failed suite={quality_cfg.suite!r} "
-                f"failed={result.failed_expectations}"
-            )
-
-            if spec.dlq:
-                import polars as pl
-
-                router = DLQRouter(spec.dlq)
-                failed_mask = pl.Series([True] * len(df))
-                clean_df, dlq_result = router.route(df, failed_mask)
-                metrics.record_dlq(spec.name, dlq_result.strategy.value)
-                return clean_df
-
-            on_failure = step.on_failure or quality_cfg.on_failure
-            if on_failure == "fail":
-                raise DataQualityError(
-                    f"Quality gate failed for suite {quality_cfg.suite!r}"
-                )
-
-        return data
+        return plugin_cls(runtime=runtime).run(data, step.params)
 
     def _execute_transform_step(self, step: StepSpec, data: Any) -> Any:
-        from toolbox.maestro.transforms.registry import TransformRegistry
+        from maestro.transforms.registry import TransformRegistry
 
         _, name = step.plugin.split(".", 1)
         plugin_cls, meta = TransformRegistry.get(name)
@@ -279,16 +276,104 @@ class PipelineEngine:
         return instance.run(data, step.params)
 
     # ------------------------------------------------------------------
-    # Context builders
+    # Runtime management
     # ------------------------------------------------------------------
+
+    def _get_or_build_runtime(self, config: RuntimeConfig) -> Any:
+        cache_key = (config.type, json.dumps(config.options, sort_keys=True, default=str))
+        if cache_key not in self._runtime_cache:
+            self._runtime_cache[cache_key] = self._build_runtime(config)
+        return self._runtime_cache[cache_key]
 
     def _build_runtime(self, config: RuntimeConfig) -> Any:
         runtime_cls = PluginRegistry.get("runtime", config.type)
         return runtime_cls(**config.options)
 
+    # ------------------------------------------------------------------
+    # Cross-runtime handoff
+    # ------------------------------------------------------------------
+
+    def _handoff(
+        self,
+        data: Any,
+        from_runtime: Any,
+        to_runtime: Any,
+        handoff_cfg: Optional[HandoffConfig],
+        pipeline: str,
+        step_name: str,
+        is_dry_run: bool = False,
+    ) -> Any:
+        from_type = type(from_runtime).__name__
+        to_type = type(to_runtime).__name__
+        logger.info(
+            f"[{pipeline}] crossing runtime boundary: {from_type} → {to_type}"
+            f" (before step {step_name!r})"
+        )
+
+        strategy = handoff_cfg.strategy if handoff_cfg else "auto"
+
+        if strategy in ("auto", "memory"):
+            try:
+                return self._bridge_via_pandas(data, from_runtime, to_runtime)
+            except MemoryError as exc:
+                if strategy == "memory":
+                    raise
+                logger.warning(
+                    f"[{pipeline}] in-memory bridge failed ({exc}),"
+                    " falling back to path handoff"
+                )
+
+        # Path-based handoff: write to temp storage, read back with the other runtime.
+        if is_dry_run:
+            logger.info(
+                f"[{pipeline}] DRY RUN — skipping path handoff, passing data through"
+            )
+            return data
+
+        if not handoff_cfg or not handoff_cfg.temp_path:
+            raise RuntimeError(
+                "Cross-runtime path handoff requires handoff.temp_path in the pipeline spec.\n"
+                "Example:\n"
+                "  handoff:\n"
+                "    strategy: path\n"
+                "    temp_path: s3://my-bucket/maestro-tmp/\n"
+                "    format: parquet"
+            )
+
+        return self._bridge_via_path(
+            data, from_runtime, to_runtime, handoff_cfg, pipeline, step_name
+        )
+
+    def _bridge_via_pandas(self, data: Any, from_runtime: Any, to_runtime: Any) -> Any:
+        pandas_df = from_runtime.to_pandas(data)
+        return to_runtime.from_pandas(pandas_df)
+
+    def _bridge_via_path(
+        self,
+        data: Any,
+        from_runtime: Any,
+        to_runtime: Any,
+        handoff_cfg: HandoffConfig,
+        pipeline: str,
+        step_name: str,
+    ) -> Any:
+        temp_path = (
+            f"{handoff_cfg.temp_path.rstrip('/')}"
+            f"/{pipeline}/{step_name}/{uuid.uuid4().hex}"
+        )
+        fmt = handoff_cfg.format
+        logger.debug(f"[{pipeline}] handoff write → {temp_path} ({fmt})")
+        from_runtime.write(data, temp_path, {"format": fmt})
+        logger.debug(f"[{pipeline}] handoff read ← {temp_path} ({fmt})")
+        return to_runtime.read(temp_path, {"format": fmt})
+
+    # ------------------------------------------------------------------
+    # Context builders
+    # ------------------------------------------------------------------
+
     def _init_observability(self, spec: PipelineSpec):
-        from toolbox.maestro.observability.events import EventLogger
-        from toolbox.maestro.observability.metrics import get_metrics
+        from maestro.observability.events import EventLogger
+        from maestro.observability.metrics import get_metrics
 
         metrics = get_metrics()
         destination = spec.observability.event_log if spec.observability else None
@@ -298,7 +383,7 @@ class PipelineEngine:
         if not spec.lineage or not spec.lineage.enabled:
             return None, "", [], []
 
-        from toolbox.maestro.lineage.openlineage import (
+        from maestro.lineage.openlineage import (
             OpenLineageEmitter,
             datasets_from_spec,
             new_run_id,
@@ -311,14 +396,14 @@ class PipelineEngine:
 
     def _build_sla_ctx(self, spec: PipelineSpec, metrics: Any, event_logger: Any):
         if spec.observability and spec.observability.sla:
-            from toolbox.maestro.observability.sla import SLATracker
+            from maestro.observability.sla import SLATracker
 
             return SLATracker(spec.name, spec.observability.sla, metrics, event_logger)
         return nullcontext()
 
     def _build_flamegraph_ctx(self, spec: PipelineSpec):
         if spec.observability and spec.observability.flamegraph_dir:
-            from toolbox.maestro.observability.flamegraph import PipelineProfiler
+            from maestro.observability.flamegraph import PipelineProfiler
 
             return PipelineProfiler(spec.observability.flamegraph_dir).profile(spec.name)
         return nullcontext()

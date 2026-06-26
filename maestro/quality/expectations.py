@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
-import polars as pl
+from maestro.pipeline.spec import QualityConfig
 
-from toolbox.maestro.pipeline.spec import QualityConfig
+if TYPE_CHECKING:
+    import polars as pl
 
 
 @dataclass
@@ -13,6 +15,7 @@ class GXValidationResult:
     suite: str
     statistics: dict
     failed_expectations: list[str]
+    failed_row_indices: list[int] = field(default_factory=list)
 
 
 class GXValidator:
@@ -34,7 +37,10 @@ class GXValidator:
         try:
             results = context.run_checkpoint(
                 checkpoint_name=config.suite,
-                validations=[{"batch_request": batch_request}],
+                validations=[{
+                    "batch_request": batch_request,
+                    "result_format": {"result_format": "COMPLETE"},
+                }],
             )
         except Exception as exc:
             raise ValueError(
@@ -45,15 +51,18 @@ class GXValidator:
         validation_result = run_result["validation_result"]
         statistics = dict(validation_result.statistics)
 
-        failed = [
-            str(r.expectation_config.expectation_type)
-            for r in validation_result.results
-            if not r.success
-        ]
+        failed: list[str] = []
+        failed_indices: set[int] = set()
+        for r in validation_result.results:
+            if not r.success:
+                failed.append(str(r.expectation_config.expectation_type))
+                for idx in r.result.get("unexpected_index_list", []):
+                    failed_indices.add(int(idx))
 
         return GXValidationResult(
             success=bool(results.success),
             suite=config.suite,
             statistics=statistics,
             failed_expectations=failed,
+            failed_row_indices=sorted(failed_indices),
         )

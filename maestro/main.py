@@ -3,10 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from toolbox.maestro.config import MaestroConfig
-from toolbox.maestro.pipeline.engine import PipelineEngine
-from toolbox.maestro.pipeline.spec import PipelineSpec
-from toolbox.maestro.pipeline.state import CheckpointStore
+from maestro.config import MaestroConfig
+from maestro.pipeline.engine import PipelineEngine
+from maestro.pipeline.spec import PipelineSpec
+from maestro.pipeline.state import CheckpointStore
 
 
 def run(

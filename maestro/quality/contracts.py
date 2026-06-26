@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
-import polars as pl
+from maestro.pipeline.spec import DataContract
 
-from toolbox.maestro.pipeline.spec import DataContract
+if TYPE_CHECKING:
+    import polars as pl
 
 _POLARS_TYPE_MAP: dict[str, pl.PolarsDataType] = {
     "string": pl.Utf8,
@@ -28,6 +30,7 @@ class ContractViolations:
 
 class ContractValidator:
     def validate(self, data: pl.DataFrame, contract: DataContract) -> ContractViolations:
+        import polars as pl
         actual_columns = set(data.columns)
         schema_map = {col.name: col for col in contract.schema_}
 

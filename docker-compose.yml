@@ -1,0 +1,114 @@
+# Maestro — composable deployment via Docker Compose profiles
+#
+# Profiles:
+#   ui            — FastAPI management UI  (localhost:8080)
+#   observability — Prometheus + Grafana   (localhost:9090, localhost:3000)
+#   lineage       — Marquez API + Web UI   (localhost:5000, localhost:3001)
+#
+# Usage:
+#   docker compose --profile ui up
+#   docker compose --profile ui --profile observability up
+#   docker compose --profile ui --profile observability --profile lineage up
+#
+# Override ports / credentials via environment variables or a .env file:
+#   MAESTRO_UI_PORT, PROMETHEUS_PORT, GRAFANA_PORT, GRAFANA_PASSWORD
+#   MARQUEZ_PORT, MARQUEZ_WEB_PORT, GRAFANA_URL, LINEAGE_URL
+
+services:
+
+  # ── UI (profile: ui) ─────────────────────────────────────────────────────────
+  maestro-ui:
+    profiles: [ui]
+    build:
+      context: .
+      args:
+        EXTRAS: ui,observability
+    command: ["python", "-m", "maestro.ui"]
+    ports:
+      - "${MAESTRO_UI_PORT:-8080}:8080"
+    environment:
+      MAESTRO_CHECKPOINT_DIR: /data/checkpoints
+      GRAFANA_URL: "${GRAFANA_URL:-http://localhost:3000}"
+      LINEAGE_URL: "${LINEAGE_URL:-http://localhost:3001}"
+    volumes:
+      - maestro-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8080/api/docs')\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # ── Observability (profile: observability) ────────────────────────────────────
+  prometheus:
+    profiles: [observability]
+    image: prom/prometheus:v2.52.0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./grafana/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+
+  grafana:
+    profiles: [observability]
+    image: grafana/grafana:10.4.3
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_PASSWORD:-admin}"
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/maestro_dashboard.json:/var/lib/grafana/dashboards/maestro.json:ro
+      - grafana-data:/var/lib/grafana
+
+  # ── Lineage (profile: lineage) ────────────────────────────────────────────────
+  marquez-postgres:
+    profiles: [lineage]
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: marquez
+      POSTGRES_PASSWORD: marquez
+      POSTGRES_DB: marquez
+    volumes:
+      - marquez-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U marquez"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  marquez:
+    profiles: [lineage]
+    image: marquezproject/marquez:0.47.0
+    depends_on:
+      marquez-postgres:
+        condition: service_healthy
+    ports:
+      - "${MARQUEZ_PORT:-5000}:5000"
+      - "5001:5001"
+    volumes:
+      - ./grafana/marquez.yml:/usr/src/app/marquez.yml:ro
+    command: ["--config", "/usr/src/app/marquez.yml"]
+
+  marquez-web:
+    profiles: [lineage]
+    image: marquezproject/marquez-web:0.47.0
+    depends_on:
+      - marquez
+    ports:
+      - "${MARQUEZ_WEB_PORT:-3001}:3000"
+    environment:
+      MARQUEZ_HOST: marquez
+      MARQUEZ_PORT: "5000"
+
+volumes:
+  maestro-data:
+  prometheus-data:
+  grafana-data:
+  marquez-postgres-data:

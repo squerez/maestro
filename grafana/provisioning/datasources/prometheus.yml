@@ -4,7 +4,7 @@ datasources:
   - name: Prometheus
     type: prometheus
     uid: maestro-prometheus
-    url: http://host.docker.internal:9090
+    url: http://prometheus:9090
     access: proxy
     isDefault: true
     jsonData:

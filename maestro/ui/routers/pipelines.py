@@ -4,7 +4,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from toolbox.maestro.pipeline.state import Checkpoint, CheckpointStore
+from maestro.pipeline.state import Checkpoint, CheckpointStore
 
 router = APIRouter()
 
